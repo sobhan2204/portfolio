@@ -1,0 +1,6 @@
+fastapi
+dotenv
+fastapi
+uvicorn
+groq
+python-dotenv

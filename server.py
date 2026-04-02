@@ -32,9 +32,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ─────────────────────────────────────────────────────────────
-#  PORTFOLIO DATA
-# ─────────────────────────────────────────────────────────────
 PORTFOLIO = {
     "name": "Sobhan Panda",
     "title": "AI Engineer",
@@ -77,15 +74,15 @@ PORTFOLIO = {
             "stack": ["Python", "LangChain", "LangGraph", "FAISS", "MCP"],
             "github": "https://github.com/sobhan2204",
             "description": (
-                "Multi-agent assistant that routes user requests across tools — weather, Gmail, "
-                "translation, web search, math — using LangGraph and LangChain. Implements a "
-                "planning step, executor, and intent-router with ChatGroq LLM. Enables real-time "
+                "The aim of this porject was not to build a ai pipeline but to build a versatile agentic AI assistant capable of handling complex tasks by orchestrating multiple tools and workflows using MCP"
+                " and LangGraph. The assistant can perform real-time decision making, tool selection, and dynamic workflow routing based on user queries. It integrates various tools like search, database access, and external APIs to provide accurate and contextually relevant responses. The system is designed to blend memory, intent recognition, planning , reasoning, self-evaluation, and tool outputs to achieve sophisticated task completion."
                 "decision making through collaborative multi-agent workflows blending memory + "
-                "intent + reasoning + self-evaluation + tool outputs."
+                "intent + reasoning + self-evaluation + tool outputs. "
             ),
+            "why it stands out" : ("This is not a regular AI assistant that is hust a pipeline of tools. It is an agentic system that can dynamically decide which tool to use, how to route information between them, and how to reason through complex tasks in real-time. The integration of MCP and LangGraph allows for sophisticated multi-agent collaboration, enabling the assistant to handle a wide range of queries with contextual understanding and adaptability."),
             "highlights": [
-                "Multi-agent routing with LangGraph",
-                "Blends memory, intent, reasoning, self-evaluation",
+                "Multi-agent routing with MCP , LangGraph and LagChain",
+                "Blends memory, intent , planning , reasoning, self-evaluation",
                 "Real-time decision making across diverse tools"
             ]
         },
@@ -94,10 +91,11 @@ PORTFOLIO = {
             "stack": ["Python", "LangChain", "FAISS", "HuggingFace"],
             "github": "https://github.com/sobhan2204",
             "description": (
-                "Modular RAG chatbot that runs semantic search, knowledge graph, and BM25 "
-                "simultaneously and constantly checks accuracy across all three, picking the best. "
-                "Supports dynamic ingestion of text, PDF, and structured data into FAISS vector stores."
+                "Modular RAG chatbot that runs semantic search, knowledge graph, and BM25 simentaniously and constantly checks accuracy across all three, picking the best. "
+                "It is a pipeline that supports dynamic ingestion of text, PDF, and structured data into FAISS vector stores."
+                "And then retrive the answer using 3 RAG algorithms in parallel."
             ),
+            "why it stands out":(" Unlike typical RAG implementations that rely on a single retrieval method, this chatbot runs three distinct RAG algorithms simultaneously and evaluates their outputs in real-time to select the most accurate response. This multi-algorithm approach ensures higher accuracy and robustness, as it can leverage the strengths of each method depending on the query context. Additionally, the system is designed to handle diverse data formats, allowing for seamless ingestion of text, PDFs, and structured data into FAISS vector stores, making it adaptable to various use cases."),
             "highlights": [
                 "Runs 3 RAG algorithms in parallel",
                 "Selects best answer by accuracy score",
@@ -153,9 +151,6 @@ PORTFOLIO = {
 }
 
 
-# ─────────────────────────────────────────────────────────────
-#  SYSTEM PROMPT BUILDER
-# ─────────────────────────────────────────────────────────────
 def build_system_prompt() -> str:
     p = PORTFOLIO
 
@@ -189,11 +184,14 @@ def build_system_prompt() -> str:
 Your job: Impress recruiters and hiring managers by clearly demonstrating why {p['name']} is an exceptional candidate.
 Always speak AS Sobhan — use "I", "my", "me".
 
+
 Tone:
 - Confident, sharp, and professional
 - Slightly persuasive (like a strong candidate who knows their worth)
 - Enthusiastic about work and impact
+- little sarcasm is allowed when appropriate, but do NOT sound arrogant or cocky
 - Never arrogant, but clearly high-value
+- don't fake anything 
 
 ━━━ ABOUT ━━━
 {p['summary']}
@@ -223,6 +221,7 @@ GitHub: {p['github']}
 - Keep answers to 2–5 sentences unless a deep dive is requested
 - Always frame responses to highlight impact, problem-solving, or technical strength
 - Use strong phrases: "I've built…", "What makes this stand out is…", "I focused on solving…"
+- Can be sarcastic when stupid questions are asked but do NOT sound arrogant or cocky
 - After answering, invite them to explore: {p['github']}
 - If something is not available: "I don't have that detail handy — feel free to reach out at {p['email']}"
 
@@ -237,9 +236,6 @@ End with confidence: "Happy to discuss this further." or "Let's connect if this 
 """
 
 
-# ─────────────────────────────────────────────────────────────
-#  TECH KEYWORD ROUTING
-# ─────────────────────────────────────────────────────────────
 TECH_KEYWORDS = {
     "ai": ["AI", "artificial intelligence", "machine learning", "ML", "neural", "deep learning"],
     "llm": ["LLM", "language model", "ChatGPT", "GPT", "Gemini", "Claude", "groq"],
@@ -327,12 +323,8 @@ Most relevant projects: {', '.join([p['name'] for p in matched_projects[:2]])}
 Highlight these naturally. Keep it concise but impressive.
 """
 
-
-# ─────────────────────────────────────────────────────────────
-#  PYDANTIC MODELS
-# ─────────────────────────────────────────────────────────────
 class Message(BaseModel):
-    role: str   # "user" | "model" (we remap "model" → "assistant" for Groq)
+    role: str   
     text: str
 
 
@@ -342,19 +334,19 @@ class LLMParams(BaseModel):
     Each field has a safe default so the endpoint works even without the sidebar.
     """
     temperature: float = 0.7
-    max_completion_tokens: int = 300   # slider value; multiplied by reasoning_effort
+    max_completion_tokens: int = 300   
     top_p: float = 1.0
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
-    seed: Optional[int] = None         # None = random; integer = reproducible
-    style_prompt: str = ""             # e.g. "Respond in a formal and professional tone."
-    reasoning_effort: str = "medium"   # "low" | "medium" | "high"
+    seed: Optional[int] = None         
+    style_prompt: str = ""           
+    reasoning_effort: str = "medium"  
 
 
 class ChatRequest(BaseModel):
     message: str
     history: List[Message] = []
-    llm_params: Optional[LLMParams] = None   # ← frontend sends this; server reads it
+    llm_params: Optional[LLMParams] = None  
 
 
 class ChatResponse(BaseModel):
@@ -435,7 +427,6 @@ async def chat(req: ChatRequest):
     # Use sidebar params if sent, otherwise fall back to defaults
     params = req.llm_params if req.llm_params is not None else LLMParams()
 
-    # ── System prompt ────────────────────────────────────────────────────────
     system_content = build_system_prompt()
 
     # Style instruction from the dropdown (e.g. "Formal", "Technical")
@@ -447,21 +438,18 @@ async def chat(req: ChatRequest):
     if req_context:
         system_content += req_context
 
-    # ── Message list ─────────────────────────────────────────────────────────
     messages = [{"role": "system", "content": system_content}]
     for msg in req.history:
         role = "assistant" if msg.role == "model" else msg.role
         messages.append({"role": role, "content": msg.text})
     messages.append({"role": "user", "content": req.message})
 
-    # ── Clamp params to Groq-safe ranges ────────────────────────────────────
     temperature       = max(0.0, min(2.0,  params.temperature))
     top_p             = max(0.0, min(1.0,  params.top_p))
     frequency_penalty = max(-2.0, min(2.0, params.frequency_penalty))
     presence_penalty  = max(-2.0, min(2.0, params.presence_penalty))
     max_tokens        = resolve_max_tokens(params)  # slider × reasoning multiplier
 
-    # ── Call Groq ────────────────────────────────────────────────────────────
     try:
         groq_kwargs = dict(
             model="llama-3.3-70b-versatile",
@@ -472,7 +460,6 @@ async def chat(req: ChatRequest):
             frequency_penalty=frequency_penalty,
             presence_penalty=presence_penalty,
         )
-        # Only pass seed when Consistency Mode is ON (seed is an int, not None)
         if params.seed is not None:
             groq_kwargs["seed"] = params.seed
 
@@ -483,7 +470,6 @@ async def chat(req: ChatRequest):
 
     reply = response.choices[0].message.content
 
-    # ── Update and trim history ───────────────────────────────────────────────
     updated_history = req.history + [
         Message(role="user",  text=req.message),
         Message(role="model", text=reply),
