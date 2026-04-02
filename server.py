@@ -120,13 +120,14 @@ PORTFOLIO = {
         },
         {
             "name": "InterviewAce — Voice AI Interviewer",
-            "stack": ["Google Gemini API", "Web Speech API", "JavaScript"],
+            "stack": ["Google Gemini API","LLM-finetunig","Web Speech API", "JavaScript"],
             "github": "https://github.com/sobhan2204",
             "description": (
                 "Real-time voice-based AI interviewer. Led the team as Team Lead and sole "
-                "AI developer, owning the complete Generative AI solution. Built prompt flow, "
-                "conversational logic, and AI response handling for contextual voice interviews "
-                "using Web Speech API and Google Gemini API."
+                "AI developer, owning the complete Generative AI solution. Finedtune LLM for interview-specific "
+                "questions and evaluation criteria. Designed contextual prompt flow and conversation logic to "
+                "simulate a realistic interview experience. Integrated Web Speech API for"
+                " seamless voice interaction and Google Gemini API for intelligent response generation."
             ),
             "highlights": [
                 "Real-time voice interviews with Gemini",
