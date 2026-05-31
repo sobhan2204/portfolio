@@ -586,7 +586,7 @@
   <div class="main-grid" id="projects">
     <div class="projects-col">
       <div class="col-header">
-        <span class="col-title">// Selected projects</span>
+        <span class="col-title">// some of my best projects and many more yet to come </span>
         <span class="col-count">04</span>
       </div>
       <div class="project-item" onclick="window.open('https://github.com/sobhan2204','_blank')">
@@ -829,7 +829,7 @@
       const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) { serverOnline = true; document.getElementById('s-dot').className = 's-dot ok'; document.getElementById('s-label').textContent = 'AI server connected — ready to chat'; }
       else throw new Error();
-    } catch { serverOnline = false; document.getElementById('s-dot').className = 's-dot err'; document.getElementById('s-label').textContent = 'Server offline — run: python server.py'; }
+    } catch { serverOnline = false; document.getElementById('s-dot').className = 's-dot err'; document.getElementById('s-label').textContent = 'Render offline'; }
   }
   checkServer(); setInterval(checkServer, 15000);
 
@@ -864,7 +864,7 @@
   async function sendMessage() {
     const input=document.getElementById('chat-input'), text=input.value.trim();
     if(!text) return;
-    if(!serverOnline) { appendMsg('ai','⚠ Python server is offline. Run: python server.py',true); return; }
+    if(!serverOnline) { appendMsg('ai','Hii ! render backend is taking some time to boot up',true); return; }
     input.value=''; document.getElementById('send-btn').disabled=true;
     appendMsg('user',text); showTyping();
     try {
