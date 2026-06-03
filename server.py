@@ -48,7 +48,7 @@ PORTFOLIO = {
         {
             "name": "Agentic AI — Multi-Tool Assistant",
             "stack": ["Python", "LangChain", "LangGraph", "FAISS", "MCP"],
-            "github": "https://github.com/sobhan2204",
+            "github": "https://github.com/sobhan2204/Agentic_AI",
             "description": (
                 "The aim of this porject was not to build a ai pipeline but to build a versatile agentic AI assistant capable of handling complex tasks by orchestrating multiple tools and workflows using MCP"
                 " and LangGraph. The assistant can perform real-time decision making, tool selection, and dynamic workflow routing based on user queries. It integrates various tools like search, database access, and external APIs to provide accurate and contextually relevant responses. The system is designed to blend memory, intent recognition, planning , reasoning, self-evaluation, and tool outputs to achieve sophisticated task completion."
@@ -65,11 +65,11 @@ PORTFOLIO = {
         {
             "name": "Multi-RAG Chatbot",
             "stack": ["Python", "LangChain", "FAISS", "HuggingFace"],
-            "github": "https://github.com/sobhan2204",
+            "github": "https://github.com/sobhan2204/multi-rag-chatbot",
             "description": (
                 "Modular RAG chatbot that runs semantic search, knowledge graph, and BM25 simentaniously and constantly checks accuracy across all three, picking the best. "
                 "It is a pipeline that supports dynamic ingestion of text, PDF, and structured data into FAISS vector stores."
-                "And then retrive the answer using 3 RAG algorithms in parallel."
+                "And then retrive the answer using 3 RAG algorithms in paralle anf then the answer is validated by a LLM validator on multiple criteria."
             ),
             "why it stands out":(" Unlike typical RAG implementations that rely on a single retrieval method, this chatbot runs three distinct RAG algorithms simultaneously and evaluates their outputs in real-time to select the most accurate response. This multi-algorithm approach ensures higher accuracy and robustness, as it can leverage the strengths of each method depending on the query context. Additionally, the system is designed to handle diverse data formats, allowing for seamless ingestion of text, PDFs, and structured data into FAISS vector stores, making it adaptable to various use cases."),
             "highlights": [
@@ -79,14 +79,15 @@ PORTFOLIO = {
             ]
         },
         {
-            "name": "Automated ML Pipeline Framework",
-            "stack": ["Python", "scikit-learn", "MLflow", "FastAPI"],
-            "github": "https://github.com/sobhan2204",
+            "name": " Snow & Avalanche Susceptibility Mapping for Vegetation Restoration",
+            "stack": ["Python", "U-KAN" , "Earth-Engine" , "Supervised Learning"],
+            "github": "https://github.com/sobhan2204/Avalanche-Susceptibility-Mapping-for-Vegetation-Restoration",
             "description": (
-                "Modular pipeline automating data validation, preprocessing, feature engineering, "
-                "and model selection. Implements automated hyperparameter tuning and evaluation "
-                "across multiple ML algorithms. Selects the model with the highest accuracy. "
-                "Handles diverse datasets with robust EDA. Scalable via FastAPI."
+                "This project focuses on identifying barren or underutilized land suitable for vegetation restoration in both plains and hilly regions ",
+                "using satellite imagery and Google Earth Engine. The system analyzes geographical and", 
+                "environmental factors such as slope, steepness to determine areas with high restoration potential and return the coordinated of locations/areas where vegetation is possible",
+                "MultiSSL pretraining learns image representations with masked patch reconstruction.",
+                "U-KAN finetuning uses the pretrained encoder and trains a segmentation decoder with pseudo-labels derived from vegetation indices such as NDVI, NDSI, and NDWI. "
             ),
             "highlights": [
                 "Full automation from raw data to best model",
@@ -96,7 +97,7 @@ PORTFOLIO = {
         },
         {
             "name": "InterviewAce — Voice AI Interviewer",
-            "stack": ["Google Gemini API","LLM-finetunig","Web Speech API", "JavaScript"],
+            "stack": ["Voice assisted chatbot","LLM-finetunig","Web scraper", "python"],
             "github": "https://github.com/sobhan2204",
             "description": (
                 "Real-time voice-based AI interviewer. Led the team as Team Lead and sole "
