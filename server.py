@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from typing import List, Optional
@@ -6,10 +7,26 @@ import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from groq import Groq
 from pydantic import BaseModel
+from tokenizers import Tokenizer
 
 load_dotenv()
+
+TOKENIZER_PATH = os.path.join(os.path.dirname(__file__), "tokenizer.json")
+tokenizer = Tokenizer.from_file(TOKENIZER_PATH)
+
+
+def tokenize_display(text: str) -> List[dict]:
+    """Tokenize text with the real Llama 3 tokenizer for live UI display."""
+    if not text:
+        return []
+    encoding = tokenizer.encode(text, add_special_tokens=False)
+    return [
+        {"id": token_id, "text": tokenizer.decode([token_id])}
+        for token_id in encoding.ids
+    ]
 
 GITHUB_USERNAME = os.getenv("GITHUB_USERNAME", "sobhan2204")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN") 
@@ -409,6 +426,10 @@ class ChatResponse(BaseModel):
     history: List[Message]
 
 
+class TokenizeRequest(BaseModel):
+    text: str
+
+
 REASONING_MULTIPLIERS = {"low": 0.5, "medium": 1.0, "high": 2.0}
 
 
@@ -475,10 +496,7 @@ def github_repos():
     return {"username": GITHUB_USERNAME, "repos": fetch_github_repos()}
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest):
-    groq_client = get_groq_client()
-
+def build_groq_kwargs(req: ChatRequest) -> dict:
     params = req.llm_params if req.llm_params is not None else LLMParams()
 
     system_content = build_system_prompt(github_repos=fetch_github_repos())
@@ -502,33 +520,76 @@ async def chat(req: ChatRequest):
     presence_penalty = max(-2.0, min(2.0, params.presence_penalty))
     max_tokens = resolve_max_tokens(params)
 
-    try:
-        groq_kwargs = dict(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            top_p=top_p,
-            frequency_penalty=frequency_penalty,
-            presence_penalty=presence_penalty,
-        )
-        if params.seed is not None:
-            groq_kwargs["seed"] = params.seed
+    groq_kwargs = dict(
+        model="llama-3.3-70b-versatile",
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        top_p=top_p,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty,
+    )
+    if params.seed is not None:
+        groq_kwargs["seed"] = params.seed
 
-        response = groq_client.chat.completions.create(**groq_kwargs)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return groq_kwargs
 
-    reply = response.choices[0].message.content
 
+def build_updated_history(req: ChatRequest, reply: str) -> List[Message]:
     updated_history = req.history + [
         Message(role="user", text=req.message),
         Message(role="model", text=reply),
     ]
     if len(updated_history) > 40:
         updated_history = updated_history[-40:]
+    return updated_history
+
+
+@app.post("/tokenize")
+def tokenize(req: TokenizeRequest):
+    return {"tokens": tokenize_display(req.text)}
+
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest):
+    groq_client = get_groq_client()
+    groq_kwargs = build_groq_kwargs(req)
+
+    try:
+        response = groq_client.chat.completions.create(**groq_kwargs)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    reply = response.choices[0].message.content
+    updated_history = build_updated_history(req, reply)
 
     return ChatResponse(reply=reply, history=updated_history)
+
+
+@app.post("/chat/stream")
+async def chat_stream(req: ChatRequest):
+    groq_client = get_groq_client()
+    groq_kwargs = build_groq_kwargs(req)
+
+    def event_stream():
+        accumulated = ""
+        try:
+            stream = groq_client.chat.completions.create(stream=True, **groq_kwargs)
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content or ""
+                if not delta:
+                    continue
+                accumulated += delta
+                payload = {"tokens": tokenize_display(accumulated)}
+                yield f"data: {json.dumps(payload)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            return
+
+        history = [m.model_dump() for m in build_updated_history(req, accumulated)]
+        yield f"data: {json.dumps({'done': True, 'reply': accumulated, 'history': history})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 if __name__ == "__main__":
