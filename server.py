@@ -14,6 +14,8 @@ from tokenizers import Tokenizer
 
 load_dotenv()
 
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+
 TOKENIZER_PATH = os.path.join(os.path.dirname(__file__), "tokenizer.json")
 tokenizer = Tokenizer.from_file(TOKENIZER_PATH)
 
@@ -123,6 +125,17 @@ PORTFOLIO = {
             "System Design",
             "Distributed Systems",
             "FastAPI",
+            "Flask",
+            "PyTorch",
+            "LightGBM",
+            "SQLAlchemy",
+            "Time-Series Forecasting",
+            "Async EventBus",
+            "Read-Model Projector",
+            "Circuit Breaker",
+            "Singleflight Request Coalescing",
+            "Predictive Autoscaling",
+            "pytest",
         ],
         "tools": [
             "Docker",
@@ -211,7 +224,7 @@ PORTFOLIO = {
             "bullets": [
                 "Designed and built an event-sourced, CQRS-based traffic forecasting microservice (FastAPI, PostgreSQL) that decouples high-frequency traffic ingestion from read-heavy forecasting queries via an async EventBus and read-model projector.",
                 "Built a three-tier ML forecasting pipeline (LightGBM per-junction/horizon models → historical seasonality fallback → moving-average baseline) with calibrated confidence scoring, ensuring predictions remain available even on model failure.",
-                "Built a predictive capacity-scaling decision engine translating traffic forecasts into SCALE/SCALE recommendations, using confidence-gated thresholds, uncertainty-aware sizing, and cooldown logic to prevent oscillation.",
+                "Built a predictive capacity-scaling decision engine translating traffic forecasts into SCALE_UP/SCALE_DOWN recommendations, using confidence-gated thresholds, uncertainty-aware sizing, and cooldown logic to prevent oscillation.",
                 "Implemented Redis caching, a circuit breaker (200ms timeout, auto-recovery), and singleflight request coalescing to eliminate thundering-herd load and ensure Redis failures never break the forecast/scaling API.",
                 "Diagnosed and fixed a critical model-rollback bug caused by SQLAlchemy ORM/bulk-update session desync, restoring reliable model version activation; added a regression test suite (pytest).",
             ],
@@ -319,15 +332,14 @@ TECH_KEYWORDS = {
     "vision": ["computer vision", "CV", "image", "CNN", "object detection", "Sentinel", "satellite"],
     "rag": ["RAG", "retrieval", "vector", "embedding", "FAISS", "semantic search", "knowledge graph", "BM25"],
     "api": ["API", "REST", "backend", "server", "endpoint", "HTTP", "FastAPI", "Flask"],
-    "backend": ["FastAPI","Rate limiting", "micro services", "load balancing"],
-    "database": ["database", "SQL", "MongoDB", "Postgres", "PostgreSQL", "MySQL", "Redis", "Pinecone"],
+    "backend": ["FastAPI","Rate limiting", "micro services", "load balancing", "CQRS", "event sourcing", "event-sourced", "EventBus", "projector", "circuit breaker", "singleflight", "thundering herd", "SQLAlchemy", "pytest", "caching"],
+    "forecasting": ["forecast", "forecasting", "traffic", "time series", "LightGBM", "seasonality", "moving average", "confidence", "scaling", "autoscaling", "capacity", "SCALE_UP", "SCALE_DOWN", "cooldown", "Trafiksol"],
+    "database": ["database", "SQL", "MongoDB", "Postgres", "PostgreSQL", "MySQL", "Redis", "Pinecone", "SQLAlchemy", "ORM"],
     "agents": ["agent", "multi-agent", "agentic", "workflow", "tool", "routing", "planner", "worker", "solver", "refiner"],
     "langchain": ["LangChain", "LangGraph", "MCP", "ReWOO"],
-    "mlops": ["pipeline", "automation", "hyperparameter", "tuning", "scikit-learn", "MLflow", "evaluation"],
+    "mlops": ["pipeline", "automation", "hyperparameter", "tuning", "scikit-learn", "MLflow", "evaluation", "LightGBM", "model versioning", "model rollback", "fallback", "regression test"],
     "devops": ["Docker","Prometheus", "Grafana", "OpenTelemetry", "CI/CD", "GitHub Actions"],
     "cloud": ["AWS", "ECS", "ECR", "cloud", "observability", "monitoring", "alerting", "Loki"],
-    "voice": ["voice", "speech", "audio", "interviewer"],
-    "interview": ["interview", "assessment", "evaluation"],
 }
 
 DOMAIN_TO_SKILLS = {
@@ -344,9 +356,8 @@ DOMAIN_TO_SKILLS = {
     "langchain": ["Python", "LangChain", "LangGraph", "MCP"],
     "devops": ["Docker", "Kubernetes", "Terraform", "Prometheus", "Grafana", "OpenTelemetry"],
     "cloud": ["AWS", "Docker", "Kubernetes", "Terraform"],
-    "mlops": ["Python", "PyTorch", "MLflow", "scikit-learn"],
-    "voice": ["JavaScript", "Python"],
-    "interview": ["Python", "JavaScript"],
+    "mlops": ["Python", "PyTorch", "MLflow", "scikit-learn", "LightGBM"],
+    "forecasting": ["Python", "LightGBM", "FastAPI", "PostgreSQL", "Redis", "SQLAlchemy", "pytest"],
 }
 
 DOMAIN_TO_PROJECTS = {
@@ -364,8 +375,7 @@ DOMAIN_TO_PROJECTS = {
     "devops": [0, 1, 2],
     "cloud": [2],
     "mlops": [2],
-    "voice": [],
-    "interview": [],
+    "forecasting": [],
 }
 
 
@@ -445,6 +455,72 @@ REASONING_MULTIPLIERS = {"low": 0.5, "medium": 1.0, "high": 2.0}
 def resolve_max_tokens(params: LLMParams) -> int:
     multiplier = REASONING_MULTIPLIERS.get(params.reasoning_effort, 1.0)
     return max(50, min(int(params.max_completion_tokens * multiplier), 8192))
+
+
+# --- Google Model Armor -------------------------------------------------------
+# Screens user prompts (prompt injection, jailbreak, PII, malicious URLs) and
+# model responses (RAI, sensitive data) via the Model Armor REST API.
+# Enabled only when MODEL_ARMOR_TEMPLATE (or PROJECT/LOCATION/TEMPLATE_ID) is set.
+MODEL_ARMOR_BLOCK_MESSAGE = (
+    "I can't help with that request. Please ask me about Sobhan's projects, "
+    "skills, or experience."
+)
+MODEL_ARMOR_FAIL_CLOSED = os.getenv("MODEL_ARMOR_FAIL_CLOSED", "false").lower() == "true"
+_armor_credentials = None
+
+
+def _model_armor_template() -> Optional[str]:
+    template = os.getenv("MODEL_ARMOR_TEMPLATE")
+    if template:
+        return template
+    project = os.getenv("MODEL_ARMOR_PROJECT")
+    location = os.getenv("MODEL_ARMOR_LOCATION")
+    template_id = os.getenv("MODEL_ARMOR_TEMPLATE_ID")
+    if project and location and template_id:
+        return f"projects/{project}/locations/{location}/templates/{template_id}"
+    return None
+
+
+def _model_armor_token() -> str:
+    global _armor_credentials
+    import google.auth
+    from google.auth.transport.requests import Request
+
+    if _armor_credentials is None:
+        _armor_credentials, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+    if not _armor_credentials.valid:
+        _armor_credentials.refresh(Request())
+    return _armor_credentials.token
+
+
+def model_armor_blocked(kind: str, text: str) -> bool:
+    """Return True if Model Armor flags `text`. kind: 'prompt' or 'response'."""
+    template = _model_armor_template()
+    if not template or not text.strip():
+        return False
+
+    location = template.split("/locations/")[1].split("/")[0]
+    method, field = (
+        ("sanitizeUserPrompt", "userPromptData")
+        if kind == "prompt"
+        else ("sanitizeModelResponse", "modelResponseData")
+    )
+    url = f"https://modelarmor.{location}.rep.googleapis.com/v1/{template}:{method}"
+    try:
+        resp = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {_model_armor_token()}"},
+            json={field: {"text": text}},
+            timeout=5,
+        )
+        resp.raise_for_status()
+        result = resp.json().get("sanitizationResult", {})
+        return result.get("filterMatchState") == "MATCH_FOUND"
+    except Exception as e:
+        print(f"[model-armor] {kind} check failed: {e}")
+        return MODEL_ARMOR_FAIL_CLOSED
 
 
 app = FastAPI(title="Sobhan Panda - AI Portfolio", version="2.0.0")
@@ -530,7 +606,7 @@ def build_groq_kwargs(req: ChatRequest) -> dict:
     max_tokens = resolve_max_tokens(params)
 
     groq_kwargs = dict(
-        model="llama-3.3-70b-versatile",
+        model=GROQ_MODEL,
         messages=messages,
         temperature=temperature,
         max_tokens=max_tokens,
@@ -540,6 +616,11 @@ def build_groq_kwargs(req: ChatRequest) -> dict:
     )
     if params.seed is not None:
         groq_kwargs["seed"] = params.seed
+    if GROQ_MODEL.startswith("openai/gpt-oss"):
+        # gpt-oss reasoning tokens count against max_tokens; leave headroom.
+        groq_kwargs["max_tokens"] = min(max_tokens + 1024, 8192)
+        if params.reasoning_effort in REASONING_MULTIPLIERS:
+            groq_kwargs["reasoning_effort"] = params.reasoning_effort
 
     return groq_kwargs
 
@@ -562,6 +643,8 @@ def tokenize(req: TokenizeRequest):
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     groq_client = get_groq_client()
+    if model_armor_blocked("prompt", req.message):
+        return ChatResponse(reply=MODEL_ARMOR_BLOCK_MESSAGE, history=req.history)
     groq_kwargs = build_groq_kwargs(req)
 
     try:
@@ -570,6 +653,8 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
     reply = response.choices[0].message.content
+    if model_armor_blocked("response", reply):
+        return ChatResponse(reply=MODEL_ARMOR_BLOCK_MESSAGE, history=req.history)
     updated_history = build_updated_history(req, reply)
 
     return ChatResponse(reply=reply, history=updated_history)
@@ -578,9 +663,14 @@ async def chat(req: ChatRequest):
 @app.post("/chat/stream")
 async def chat_stream(req: ChatRequest):
     groq_client = get_groq_client()
-    groq_kwargs = build_groq_kwargs(req)
+    blocked_prompt = model_armor_blocked("prompt", req.message)
+    groq_kwargs = None if blocked_prompt else build_groq_kwargs(req)
 
     def event_stream():
+        if blocked_prompt:
+            history = [m.model_dump() for m in req.history]
+            yield f"data: {json.dumps({'done': True, 'reply': MODEL_ARMOR_BLOCK_MESSAGE, 'history': history})}\n\n"
+            return
         accumulated = ""
         try:
             stream = groq_client.chat.completions.create(stream=True, **groq_kwargs)
@@ -593,6 +683,11 @@ async def chat_stream(req: ChatRequest):
                 yield f"data: {json.dumps(payload)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            return
+
+        if model_armor_blocked("response", accumulated):
+            history = [m.model_dump() for m in req.history]
+            yield f"data: {json.dumps({'done': True, 'reply': MODEL_ARMOR_BLOCK_MESSAGE, 'history': history})}\n\n"
             return
 
         history = [m.model_dump() for m in build_updated_history(req, accumulated)]

@@ -6,3 +6,4 @@ groq
 python-dotenv
 requests
 tokenizers
+google-auth
